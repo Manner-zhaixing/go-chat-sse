@@ -1,0 +1,17 @@
+Name: user-api
+Host: 0.0.0.0
+Port: 8887
+mysqlConfig:
+  datasource: "root:123456@tcp(127.0.0.1:3306)/go-chat-sse?charset=utf8mb4&parseTime=True&loc=Local"
+  connectTimeout: 10
+auth:
+  accessSecret: "secret123456"
+  expire: 3600
+
+RedisConfig:
+  Host: "127.0.0.1:6379"
+  Pass: ""
+  Type: "node"
+  Tls: false
+  NonBlock: false
+  PingTimeout: 1s

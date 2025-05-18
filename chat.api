@@ -1,0 +1,89 @@
+syntax = "v1"
+
+// 用户注册req
+type RegisterReq {
+	Username string `json:"username" range=[6:20]`
+	Password string `json:"password" range=[6:20]`
+}
+
+// 用户注册resp
+type RegisterResp {
+	Msg string `json:"msg"`
+}
+
+// 用户登录req
+type LoginReq {
+	Username string `json:"username" range=[6:20]`
+	Password string `json:"password" range=[6:20]`
+}
+
+// 用户登录resp
+type LoginResp {
+	Token string `json:"token"`
+}
+
+type UserInfoReq {
+	UserId int64 `path:"userid"`
+}
+
+type UserInfoResp {
+	Id       int64
+	Username string
+}
+
+type MessageReq {
+	ConversationId int64  `json:"conversation_id"`
+	ModelId        int    `json:"model_id"`
+	FromId         int64  `json:"from_id"`
+	ToId           int64  `json:"to_id"`
+	Content        string `json:"content"`
+}
+
+type MessageResp {
+	SessionId int64 `json:"session_id"`
+}
+
+type MessagePullResp {
+	Messageid int64 `json:"messageid"`
+	Content   string `json:"content"`
+	FromId    int64 `json:"from_id"`
+	ToId      int64 `json:"to_id"`
+	Done int `json:"done"`
+	CurTime   string `json:"cur_time"`
+}
+
+@server (
+	prefix: v1
+	group:  user
+)
+service user-api {
+	@handler register
+	post /user/register (RegisterReq) returns (RegisterResp)
+
+	@handler login
+	post /user/login (LoginReq) returns (LoginResp)
+}
+
+@server (
+	prefix: v1
+	group:  user
+	jwt:    Auth
+)
+service user-api {
+	@handler getUserInfo
+	get /user/info returns (UserInfoResp)
+}
+
+@server (
+	prefix: v1
+	group:  chat
+	jwt:    Auth
+)
+service user-api {
+	@handler message
+	post /message/send (MessageReq) returns (MessageResp)
+
+	@handler messagepull
+	get /message/pull/:sessionid returns (MessagePullResp)
+}
+
