@@ -127,14 +127,3 @@ func StreamChatRequest(requestData ChatRequest) error {
 
 	return nil
 }
-func main() {
-	// 准备请求数据
-	requestData := ChatRequest{
-		Messages: []Message{
-			{Role: "system", Content: "You are a helpful assistant."},
-			{Role: "user", Content: "Hello!介绍一下你自己"},
-		},
-	}
-	// 发送流式请求
-	streamChatRequest(requestData)
-}
