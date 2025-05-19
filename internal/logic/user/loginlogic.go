@@ -2,6 +2,8 @@ package user
 
 import (
 	"context"
+	"errors"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"go-chat-sse/internal/biz"
 	"go-chat-sse/internal/model"
 	"go-chat-sse/internal/tools"
@@ -47,8 +49,13 @@ func (l *LoginLogic) Login(req *types.LoginReq) (*types.LoginResp, error) {
 	// 2.根据用户名查询userOne
 	userOne, err := l.userModel.FindByUsername(l.ctx, req.Username)
 	if err != nil {
-		l.Logger.Errorf("%s database error.info:%v", biz.DBError, *req)
-		return nil, biz.DBError
+		if errors.Is(err, sqlx.ErrNotFound) {
+			l.Logger.Infof("%s user not exists.info:%v", userLoginModule, *req)
+			return nil, biz.UserNotFound
+		} else {
+			l.Logger.Errorf("%s database error.info:%v", biz.DBError, *req)
+			return nil, biz.DBError
+		}
 	}
 	// 3.校验密码是否正确
 	if !tools.CheckPasswordHash(req.Password, userOne.Password) {
