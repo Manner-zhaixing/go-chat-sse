@@ -10,6 +10,19 @@ type LoginResp struct {
 	Token string `json:"token"`
 }
 
+type MessagePullReq struct {
+	SessionId int64 `path:"sessionid"`
+}
+
+type MessagePullResp struct {
+	Messageid int64  `json:"messageid"`
+	Content   string `json:"content"`
+	FromId    int64  `json:"from_id"`
+	ToId      int64  `json:"to_id"`
+	Done      int    `json:"done"`
+	CurTime   string `json:"cur_time"`
+}
+
 type MessageReq struct {
 	ConversationId int64  `json:"conversation_id"`
 	ModelId        int    `json:"model_id"`
@@ -20,6 +33,10 @@ type MessageReq struct {
 
 type MessageResp struct {
 	SessionId int64 `json:"session_id"`
+}
+
+type NewConversationResp struct {
+	ConversationId int64 `json:"conversation_id"`
 }
 
 type RegisterReq struct {

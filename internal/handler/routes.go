@@ -15,6 +15,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
 		[]rest.Route{
 			{
+				Method:  http.MethodGet,
+				Path:    "/message/pull/:sessionid",
+				Handler: chat.MessagePullHandler(serverCtx),
+			},
+			{
 				Method:  http.MethodPost,
 				Path:    "/message/send",
 				Handler: chat.MessageHandler(serverCtx),

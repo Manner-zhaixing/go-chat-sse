@@ -15,3 +15,10 @@ RedisConfig:
   Tls: false
   NonBlock: false
   PingTimeout: 1s
+Snowflake:
+  WorkerId: 1  # 工作节点ID (0-1023)
+  DataCenterId: 1  # 数据中心ID (0-31)
+DeepSeek:
+  apiURL: "https://api.deepseek.com/chat/completions"
+  apiKey: "sk-a2b35940a42e4e84a3896b2cfc5e74b5"
+  apiModel: "deepseek-chat"

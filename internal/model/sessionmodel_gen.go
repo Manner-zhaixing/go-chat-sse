@@ -25,6 +25,7 @@ type (
 	sessionModel interface {
 		Insert(ctx context.Context, data *Session) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*Session, error)
+		FindOneBySessionId(ctx context.Context, sessionId int64) (*Session, error)
 		Update(ctx context.Context, data *Session) error
 		Delete(ctx context.Context, id int64) error
 	}
@@ -36,9 +37,11 @@ type (
 
 	Session struct {
 		Id             int64     `db:"id"`
+		SessionId      int64     `db:"session_id"`      // 一问一答对应的sessionid，业务生成
 		UserId         int64     `db:"user_id"`         // 会话记录属于用户的userid
 		ConversationId int64     `db:"conversation_id"` // 会话记录id
 		MessageId      int64     `db:"message_id"`      // 消息id
+		ResMessageId   int64     `db:"res_message_id"`  // 流消息
 		CurTime        time.Time `db:"cur_time"`        // 时间
 	}
 )
@@ -70,15 +73,29 @@ func (m *defaultSessionModel) FindOne(ctx context.Context, id int64) (*Session, 
 	}
 }
 
+func (m *defaultSessionModel) FindOneBySessionId(ctx context.Context, sessionId int64) (*Session, error) {
+	var resp Session
+	query := fmt.Sprintf("select %s from %s where `session_id` = ? limit 1", sessionRows, m.table)
+	err := m.conn.QueryRowCtx(ctx, &resp, query, sessionId)
+	switch err {
+	case nil:
+		return &resp, nil
+	case sqlx.ErrNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
+}
+
 func (m *defaultSessionModel) Insert(ctx context.Context, data *Session) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?)", m.table, sessionRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.UserId, data.ConversationId, data.MessageId, data.CurTime)
+	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?)", m.table, sessionRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.SessionId, data.UserId, data.ConversationId, data.MessageId, data.ResMessageId, data.CurTime)
 	return ret, err
 }
 
-func (m *defaultSessionModel) Update(ctx context.Context, data *Session) error {
+func (m *defaultSessionModel) Update(ctx context.Context, newData *Session) error {
 	query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, sessionRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, data.UserId, data.ConversationId, data.MessageId, data.CurTime, data.Id)
+	_, err := m.conn.ExecCtx(ctx, query, newData.SessionId, newData.UserId, newData.ConversationId, newData.MessageId, newData.ResMessageId, newData.CurTime, newData.Id)
 	return err
 }
 

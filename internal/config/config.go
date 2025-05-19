@@ -10,6 +10,15 @@ type Config struct {
 	MysqlConfig MysqlConfig
 	RedisConfig redis.RedisConf
 	Auth        AuthConfig
+	Snowflake   struct {
+		WorkerId     int64
+		DataCenterId int64
+	}
+	DeepSeek struct {
+		apiURL   string
+		apiKey   string
+		apiModel string
+	}
 }
 
 type MysqlConfig struct {

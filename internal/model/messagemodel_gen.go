@@ -25,6 +25,8 @@ type (
 	messageModel interface {
 		Insert(ctx context.Context, data *Message) (sql.Result, error)
 		FindOne(ctx context.Context, id int64) (*Message, error)
+		FindOneByMessageId(ctx context.Context, messageId int64) (*Message, error)
+		FindOneBySessionId(ctx context.Context, sessionId int64) (*Message, error)
 		Update(ctx context.Context, data *Message) error
 		Delete(ctx context.Context, id int64) error
 	}
@@ -36,12 +38,14 @@ type (
 
 	Message struct {
 		Id             int64     `db:"id"`
+		MessageId      int64     `db:"message_id"`      // 消息id，业务生成存入
 		UserId         int64     `db:"user_id"`         // 会话记录属于用户的userid
 		ConversationId int64     `db:"conversation_id"` // 会话记录id
-		ModelId        int       `db:"model_id"`        // 模型id 0-deepseek-v3,1-deepseek-r1
+		ModelId        int64     `db:"model_id"`        // 模型id 0-deepseek-v3,1-deepseek-r1
 		FromId         int64     `db:"from_id"`         // 消息发送的用户id
 		ToId           int64     `db:"to_id"`           // 消息接收的用户id
 		Content        string    `db:"content"`         // 消息内容
+		Done           int64     `db:"done"`            // 流消息是否停止了，0-没停止，1-停止
 		CurTime        time.Time `db:"cur_time"`        // 消息发送时间
 	}
 )
@@ -67,21 +71,35 @@ func (m *defaultMessageModel) FindOne(ctx context.Context, id int64) (*Message, 
 	case nil:
 		return &resp, nil
 	case sqlx.ErrNotFound:
-		return nil, nil
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
+}
+
+func (m *defaultMessageModel) FindOneByMessageId(ctx context.Context, messageId int64) (*Message, error) {
+	var resp Message
+	query := fmt.Sprintf("select %s from %s where `message_id` = ? limit 1", messageRows, m.table)
+	err := m.conn.QueryRowCtx(ctx, &resp, query, messageId)
+	switch err {
+	case nil:
+		return &resp, nil
+	case sqlx.ErrNotFound:
+		return nil, ErrNotFound
 	default:
 		return nil, err
 	}
 }
 
 func (m *defaultMessageModel) Insert(ctx context.Context, data *Message) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?)", m.table, messageRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.UserId, data.ConversationId, data.ModelId, data.FromId, data.ToId, data.Content, data.CurTime)
+	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, messageRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.MessageId, data.UserId, data.ConversationId, data.ModelId, data.FromId, data.ToId, data.Content, data.Done, data.CurTime)
 	return ret, err
 }
 
-func (m *defaultMessageModel) Update(ctx context.Context, data *Message) error {
+func (m *defaultMessageModel) Update(ctx context.Context, newData *Message) error {
 	query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, messageRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, data.UserId, data.ConversationId, data.ModelId, data.FromId, data.ToId, data.Content, data.CurTime, data.Id)
+	_, err := m.conn.ExecCtx(ctx, query, newData.MessageId, newData.UserId, newData.ConversationId, newData.ModelId, newData.FromId, newData.ToId, newData.Content, newData.Done, newData.CurTime, newData.Id)
 	return err
 }
 

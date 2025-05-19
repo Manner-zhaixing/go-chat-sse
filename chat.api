@@ -44,12 +44,20 @@ type MessageResp {
 }
 
 type MessagePullResp {
-	Messageid int64 `json:"messageid"`
+	Messageid int64  `json:"messageid"`
 	Content   string `json:"content"`
-	FromId    int64 `json:"from_id"`
-	ToId      int64 `json:"to_id"`
-	Done int `json:"done"`
+	FromId    int64  `json:"from_id"`
+	ToId      int64  `json:"to_id"`
+	Done      int    `json:"done"`
 	CurTime   string `json:"cur_time"`
+}
+
+type MessagePullReq {
+	SessionId int64 `path:"sessionid"`
+}
+
+type NewConversationResp {
+	ConversationId int64 `json:"conversation_id"`
 }
 
 @server (
@@ -84,6 +92,6 @@ service user-api {
 	post /message/send (MessageReq) returns (MessageResp)
 
 	@handler messagepull
-	get /message/pull/:sessionid returns (MessagePullResp)
+	get /message/pull/:sessionid (MessagePullReq) returns (MessagePullResp)
 }
 

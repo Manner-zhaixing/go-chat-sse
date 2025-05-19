@@ -53,10 +53,13 @@ func (l *MessageLogic) Message(req *types.MessageReq) (*types.MessageResp, error
 		return nil, biz.TokenError
 	}
 	// 2.在message表中存储消息
-	messageRes, err := l.messageModel.Insert(l.ctx, &model.Message{
+	// 生成messageid
+	messageId := l.svcCtx.IdWorker.Next()
+	_, err = l.messageModel.Insert(l.ctx, &model.Message{
+		MessageId:      messageId,
 		UserId:         userId,
 		ConversationId: req.ConversationId,
-		ModelId:        req.ModelId,
+		ModelId:        int64(req.ModelId),
 		FromId:         req.FromId,
 		ToId:           req.ToId,
 		Content:        req.Content,
@@ -68,12 +71,21 @@ func (l *MessageLogic) Message(req *types.MessageReq) (*types.MessageResp, error
 		return nil, biz.DBError
 	}
 	// 3.插入session表，获取session_id
-	messsageId, err := messageRes.LastInsertId()
-	l.SessionModel.Insert(l.ctx, &model.Session{
+	sessionid, _ := l.svcCtx.IdWorkerRedis.GenerateID()
+	_, err = l.SessionModel.Insert(l.ctx, &model.Session{
+		SessionId:      sessionid,
 		ConversationId: req.ConversationId,
 		UserId:         userId,
-		MessageId:      messsageId,
+		MessageId:      messageId,
 	})
+	if err != nil {
+		// 插入失败
+		l.Logger.Errorf("%s database error.info:%v", messageModule, *req)
+		return nil, biz.DBError
+	}
 	// 4.返回sessionid
-	return nil, nil
+	l.Logger.Infof("%s message success.info:%v", messageModule, *req)
+	return &types.MessageResp{
+		SessionId: sessionid,
+	}, nil
 }
