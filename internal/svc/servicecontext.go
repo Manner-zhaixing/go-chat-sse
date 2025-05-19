@@ -13,14 +13,14 @@ type ServiceContext struct {
 	Mysql         sqlx.SqlConn
 	Redis         *redis.Redis
 	IdWorker      *tools.Worker // ID生成器
-	IdWorkerRedis *tools.SimpleRedisIDGenerator
+	IdWorkerRedis *tools.RedisInt64IDGenerator
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
 	sqlConn := db.NewMysql(c.MysqlConfig)
 	redisConn := db.NewRedisConn(c.RedisConfig)
 	IdWorker, err := tools.NewWorker(c.Snowflake.WorkerId)
-	IdWorkerRedis, err := tools.NewSimpleRedisIDGenerator(redisConn, c.Snowflake.WorkerId)
+	IdWorkerRedis, err := tools.NewRedisInt64IDGenerator(redisConn, c.Snowflake.WorkerId)
 	if err != nil {
 		panic(err)
 	}

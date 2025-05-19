@@ -62,10 +62,11 @@ func (l *RegisterLogic) Register(req *types.RegisterReq) (*types.RegisterResp, e
 		l.Logger.Infof("%s password error,加密失败.info:%v", userRegisterModule, *req)
 	}
 	_, err = l.UserModel.Insert(l.ctx, &model.User{
-		Username:      req.Username,
-		Password:      passwordCry,
-		RegisterTime:  tools.GetNowTime(),
-		LastLoginTime: tools.GetNowTime(),
+		Username:         req.Username,
+		Password:         passwordCry,
+		ConversationNums: 0,
+		RegisterTime:     tools.GetNowTime(),
+		LastLoginTime:    tools.GetNowTime(),
 	})
 	if err != nil {
 		l.Logger.Errorf("%s database error.info:%v", userRegisterModule, *req)

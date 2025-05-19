@@ -1,11 +1,9 @@
 package third
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 )
 
@@ -14,8 +12,6 @@ const (
 	apiKey   = "sk-a2b35940a42e4e84a3896b2cfc5e74b5" // 替换为你的实际API密钥
 	apiModel = "deepseek-chat"
 )
-
-var DsDataChannel = make(chan string)
 
 type Message struct {
 	Role    string `json:"role"`
@@ -51,22 +47,24 @@ type StreamChatResponse struct {
 		Delta struct {
 			Content string `json:"content"`
 		} `json:"delta"`
+		Index        int    `json:"index"`
+		FinishReason string `json:"finish_reason"`
 	} `json:"choices"`
 }
 
-func StreamChatRequest(requestData ChatRequest) error {
+func StreamChatRequest(requestData ChatRequest) (*http.Response, error) {
 	// 编码请求体
-	requestData.Stream = true
 	requestData.Model = apiModel
+	requestData.Stream = true
 	requestBody, err := json.Marshal(requestData)
 	if err != nil {
-		return fmt.Errorf("编码请求体失败: %w", err)
+		return nil, fmt.Errorf("编码请求体失败: %w", err)
 	}
-
+	fmt.Println(string(requestBody))
 	// 创建HTTP请求
 	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(requestBody))
 	if err != nil {
-		return fmt.Errorf("创建请求失败: %w", err)
+		return nil, fmt.Errorf("创建请求失败: %w", err)
 	}
 
 	// 设置请求头
@@ -77,53 +75,8 @@ func StreamChatRequest(requestData ChatRequest) error {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("发送请求失败: %w", err)
+		return nil, fmt.Errorf("发送请求失败: %w", err)
 	}
-	defer resp.Body.Close()
-
-	// 检查响应状态码
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("API返回错误: %s, 响应体: %s", resp.Status, string(body))
-	}
-
-	// 处理流式响应
-	scanner := bufio.NewScanner(resp.Body)
-	for scanner.Scan() {
-		line := scanner.Bytes()
-		if len(line) == 0 {
-			continue
-		}
-
-		// SSE 数据行以 "data: " 开头
-		if bytes.HasPrefix(line, []byte("data: ")) {
-			data := line[6:] // 去掉 "data: " 前缀
-
-			// 检查是否是结束标记
-			if string(data) == "[DONE]" {
-				fmt.Println("\n流式传输结束")
-				break
-			}
-
-			// 解析JSON数据
-			var chunk StreamChatResponse
-			if err := json.Unmarshal(data, &chunk); err != nil {
-				return fmt.Errorf("解析流数据失败: %w", err)
-			}
-
-			// 打印内容
-			for _, choice := range chunk.Choices {
-				if choice.Delta.Content != "" {
-					DsDataChannel <- choice.Delta.Content
-					fmt.Print(choice.Delta.Content)
-				}
-			}
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("读取流数据失败: %w", err)
-	}
-
-	return nil
+	//defer resp.Body.Close()
+	return resp, nil
 }

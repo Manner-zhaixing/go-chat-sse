@@ -67,20 +67,22 @@ func (l *MessageLogic) Message(req *types.MessageReq) (*types.MessageResp, error
 	})
 	if err != nil {
 		// 插入失败
-		l.Logger.Errorf("%s database error.info:%v", messageModule, *req)
+		l.Logger.Errorf("%s database error,err:%s,info:%v", messageModule, err, *req)
 		return nil, biz.DBError
 	}
 	// 3.插入session表，获取session_id
-	sessionid, _ := l.svcCtx.IdWorkerRedis.GenerateID()
+	sessionid, _ := l.svcCtx.IdWorkerRedis.GenerateInt64ID()
 	_, err = l.SessionModel.Insert(l.ctx, &model.Session{
 		SessionId:      sessionid,
 		ConversationId: req.ConversationId,
 		UserId:         userId,
 		MessageId:      messageId,
+		ResMessageId:   messageId + 1,
+		CurTime:        tools.GetNowTime(),
 	})
 	if err != nil {
 		// 插入失败
-		l.Logger.Errorf("%s database error.info:%v", messageModule, *req)
+		l.Logger.Errorf("%s database error，err:%s,info:%v", messageModule, err, *req)
 		return nil, biz.DBError
 	}
 	// 4.返回sessionid

@@ -14,7 +14,6 @@ type (
 	// and implement the added methods in customUserModel.
 	UserModel interface {
 		userModel
-		withSession(session sqlx.Session) UserModel
 		FindByUsername(ctx context.Context, username string) (*User, error)
 		FindByUsernameAndPassword(ctx context.Context, username string, password string) (*User, error)
 	}
@@ -23,6 +22,13 @@ type (
 		*defaultUserModel
 	}
 )
+
+// NewUserModel returns a model for the database table.
+func NewUserModel(conn sqlx.SqlConn) UserModel {
+	return &customUserModel{
+		defaultUserModel: newUserModel(conn),
+	}
+}
 
 func (m *customUserModel) FindByUsername(ctx context.Context, username string) (*User, error) {
 	//TODO implement me
@@ -52,15 +58,4 @@ func (m *customUserModel) FindByUsernameAndPassword(ctx context.Context, usernam
 	default:
 		return nil, err
 	}
-}
-
-// NewUserModel returns a model for the database table.
-func NewUserModel(conn sqlx.SqlConn) UserModel {
-	return &customUserModel{
-		defaultUserModel: newUserModel(conn),
-	}
-}
-
-func (m *customUserModel) withSession(session sqlx.Session) UserModel {
-	return NewUserModel(sqlx.NewSqlConnFromSession(session))
 }

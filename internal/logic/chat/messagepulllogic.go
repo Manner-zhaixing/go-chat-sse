@@ -1,18 +1,21 @@
 package chat
 
 import (
+	"bufio"
+	"bytes"
 	"context"
-	"errors"
+	"encoding/json"
 	"fmt"
-	"github.com/zeromicro/go-zero/core/stores/sqlx"
+	"github.com/zeromicro/go-zero/core/logx"
 	"go-chat-sse/internal/biz"
 	"go-chat-sse/internal/model"
 	"go-chat-sse/internal/svc"
 	"go-chat-sse/internal/third"
 	"go-chat-sse/internal/types"
+	"io"
+	"log"
 	"net/http"
-
-	"github.com/zeromicro/go-zero/core/logx"
+	"strings"
 )
 
 const MessagePull = "[messagePull]"
@@ -22,6 +25,7 @@ type MessagePullLogic struct {
 	ctx          context.Context
 	svcCtx       *svc.ServiceContext
 	MessageModel model.MessageModel
+	SessionModel model.SessionModel
 }
 
 func NewMessagePullLogic(ctx context.Context, svcCtx *svc.ServiceContext) *MessagePullLogic {
@@ -30,6 +34,7 @@ func NewMessagePullLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Messa
 		ctx:          ctx,
 		svcCtx:       svcCtx,
 		MessageModel: model.NewMessageModel(svcCtx.Mysql),
+		SessionModel: model.NewSessionModel(svcCtx.Mysql),
 	}
 }
 
@@ -40,65 +45,89 @@ func (l *MessagePullLogic) checkData(req *types.MessagePullReq) error {
 	return nil
 }
 
-func (l *MessagePullLogic) MessagePullLogic(req *types.MessagePullReq, w http.ResponseWriter, r *http.Request) (*types.MessagePullResp, error) {
+func (l *MessagePullLogic) MessagePullLogic(req *types.MessagePullReq, w http.ResponseWriter, r *http.Request, messageChan chan string) error {
 	// 1.校验数据
 	err := l.checkData(req)
 	if err != nil {
 		l.Logger.Infof("%s req data param error,err:%s", MessagePull, err)
-		return nil, biz.ParamError
-	}
-	// 查询sessionid对应的message
-	messageOne, err := l.MessageModel.FindOneByMessageId(l.ctx, req.SessionId)
-	if err != nil {
-		if errors.Is(err, sqlx.ErrNotFound) {
-			l.Logger.Infof("%s sessionid:%d not found", MessagePull, req.SessionId)
-			return nil, biz.MessageNotExistErr
-		} else {
-			l.Logger.Errorf("%s db error,err:%s", MessagePull, err)
-			return nil, biz.DBError
-		}
+		return biz.ParamError
 	}
 
-	// 2.设置响应头
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	//// 查询sessionid对应的message
+	//sessionOne, err := l.SessionModel.FindOneBySessionId(l.ctx, req.SessionId)
+	//if err != nil {
+	//	if errors.Is(err, sqlx.ErrNotFound) {
+	//		l.Logger.Infof("%s sessionid:%d not found", MessagePull, req.SessionId)
+	//		return biz.MessageNotExistErr
+	//	} else {
+	//		l.Logger.Errorf("%s db error,err:%s", MessagePull, err)
+	//		return biz.DBError
+	//	}
+	//}
+	//messageOne, err := l.MessageModel.FindOneByMessageId(l.ctx, sessionOne.MessageId)
+	//if err != nil {
+	//	if errors.Is(err, sqlx.ErrNotFound) {
+	//		l.Logger.Infof("%s message:%d not found", MessagePull, sessionOne.MessageId)
+	//		return biz.MessageNotExistErr
+	//	} else {
+	//		l.Logger.Errorf("%s db error,err:%s", MessagePull, err)
+	//		return biz.DBError
+	//	}
+	//}
 
-	// 创建一个通道用于发送消息
-	defer close(third.DsDataChannel)
-
-	// 监听客户端断开连接
-	notify := w.(http.CloseNotifier).CloseNotify()
 	// 获取ds消息
+	//fmt.Println(messageOne.Content)
 	requestData := third.ChatRequest{
 		Messages: []third.Message{
 			{Role: "system", Content: "You are a helpful assistant."},
-			{Role: "user", Content: messageOne.Content},
+			{Role: "user", Content: "你能做什么啊"},
 		},
 	}
-	err = third.StreamChatRequest(requestData)
+
+	resp, err := third.StreamChatRequest(requestData)
 	if err != nil {
-		l.Logger.Infof("%s deepseek-req error,err:%s", MessagePull, err)
-		return nil, biz.ParamError
+		fmt.Println("ds响应错误了", err)
+		return nil
 	}
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		log.Printf("DeepSeek error response: %s", body)
+		//http.Error(w, "DeepSeek returned error", resp.StatusCode)
+		return nil
+	}
+	// 5. 流式读取DeepSeek响应并转发给客户端
+	scanner := bufio.NewScanner(resp.Body)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
 
-	for {
-		select {
-		case <-notify:
-			l.Logger.Infof("%s client disconnected", MessagePull)
-			return nil, nil
-		case msg := <-third.DsDataChannel:
-			// 按照 SSE 格式发送消息
-			// data: 开头，结尾两个换行
-			fmt.Fprintf(w, "data: %s\n\n", msg)
+		// SSE 数据行以 "data: " 开头
+		if bytes.HasPrefix(line, []byte("data: ")) {
+			data := line[6:] // 去掉 "data: " 前缀
+			if strings.Contains(string(data), "[DONE]") {
+				fmt.Println("\n流式传输结束")
+				break
+			}
 
-			// 刷新缓冲区，确保消息立即发送
-			if flusher, ok := w.(http.Flusher); ok {
-				flusher.Flush()
-			} else {
-				l.Logger.Infof("%s 无法初始化刷新器.", MessagePull)
+			// 解析JSON数据
+			var chunk third.StreamChatResponse
+			if err := json.Unmarshal(data, &chunk); err != nil {
+				return fmt.Errorf("解析流数据失败: %w", err)
+			}
+			// 打印内容
+			for _, choice := range chunk.Choices {
+				if choice.Delta.Content != "" {
+					messageChan <- fmt.Sprintf("data: %s\n\n", choice.Delta.Content)
+				}
+
 			}
 		}
 	}
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("读取流数据失败: %w", err)
+	}
+	return nil
 }

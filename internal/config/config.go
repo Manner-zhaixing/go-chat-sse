@@ -15,9 +15,9 @@ type Config struct {
 		DataCenterId int64
 	}
 	DeepSeek struct {
-		apiURL   string
-		apiKey   string
-		apiModel string
+		ApiURL   string
+		ApiKey   string
+		ApiModel string
 	}
 }
 
