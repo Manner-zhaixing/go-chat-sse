@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	chat "go-chat-sse/internal/handler/chat"
+	health "go-chat-sse/internal/handler/health"
 	user "go-chat-sse/internal/handler/user"
 	"go-chat-sse/internal/svc"
 
@@ -27,6 +28,16 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		},
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
 		rest.WithPrefix("/v1"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/health",
+				Handler: health.HealthHandler(serverCtx),
+			},
+		},
 	)
 
 	server.AddRoutes(
