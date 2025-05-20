@@ -96,7 +96,7 @@ func (l *MessagePullLogic) MessagePullLogic(req *types.MessagePullReq, w http.Re
 		}
 		var role string
 		for _, message := range *messageMore {
-			if message.FromId == 100 {
+			if message.FromId < l.svcCtx.Config.CommonUserIdStart {
 				role = "system"
 			} else {
 				role = "user"

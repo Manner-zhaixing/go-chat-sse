@@ -19,6 +19,7 @@ type Config struct {
 		ApiKey   string
 		ApiModel string
 	}
+	CommonUserIdStart int64
 }
 
 type MysqlConfig struct {
