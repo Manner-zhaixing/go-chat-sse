@@ -13,7 +13,6 @@ import (
 	"go-chat-sse/internal/third"
 	"go-chat-sse/internal/types"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -45,7 +44,7 @@ func (l *MessagePullLogic) checkData(req *types.MessagePullReq) error {
 	return nil
 }
 
-func (l *MessagePullLogic) MessagePullLogic(req *types.MessagePullReq, w http.ResponseWriter, r *http.Request, messageChan chan string) error {
+func (l *MessagePullLogic) MessagePullLogic(req *types.MessagePullReq, w http.ResponseWriter, r *http.Request) error {
 	// 1.校验数据
 	err := l.checkData(req)
 	if err != nil {
@@ -80,19 +79,18 @@ func (l *MessagePullLogic) MessagePullLogic(req *types.MessagePullReq, w http.Re
 	requestData := third.ChatRequest{
 		Messages: []third.Message{
 			{Role: "system", Content: "You are a helpful assistant."},
-			{Role: "user", Content: "你能做什么啊"},
+			{Role: "user", Content: "介绍一下你自己，最多50个字"},
 		},
 	}
 
 	resp, err := third.StreamChatRequest(requestData)
 	if err != nil {
-		fmt.Println("ds响应错误了", err)
+		l.Logger.Infof("%s DeepSeek error,err:%s", MessagePull, err)
 		return nil
 	}
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		log.Printf("DeepSeek error response: %s", body)
-		//http.Error(w, "DeepSeek returned error", resp.StatusCode)
+		l.Logger.Infof("%s DeepSeek error,err:%s,body:%s", MessagePull, err, string(body))
 		return nil
 	}
 	// 5. 流式读取DeepSeek响应并转发给客户端
@@ -107,7 +105,7 @@ func (l *MessagePullLogic) MessagePullLogic(req *types.MessagePullReq, w http.Re
 		if bytes.HasPrefix(line, []byte("data: ")) {
 			data := line[6:] // 去掉 "data: " 前缀
 			if strings.Contains(string(data), "[DONE]") {
-				fmt.Println("\n流式传输结束")
+				l.Logger.Infof("%s stream end,sessionid:%s", MessagePull, req.SessionId)
 				break
 			}
 
@@ -119,9 +117,13 @@ func (l *MessagePullLogic) MessagePullLogic(req *types.MessagePullReq, w http.Re
 			// 打印内容
 			for _, choice := range chunk.Choices {
 				if choice.Delta.Content != "" {
-					messageChan <- fmt.Sprintf("data: %s\n\n", choice.Delta.Content)
+					// fmt.Println(choice.Delta.Content)
+					fmt.Fprintf(w, "data: %s\n\n", choice.Delta.Content)
+					//fmt.Fprintf(w, "data: %s\n\n", choice)
+					if flusher, ok := w.(http.Flusher); ok {
+						flusher.Flush()
+					}
 				}
-
 			}
 		}
 	}
