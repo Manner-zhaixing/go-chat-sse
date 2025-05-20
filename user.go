@@ -19,8 +19,12 @@ func main() {
 
 	var c config.Config
 	conf.MustLoad(*configFile, &c)
-
-	server := rest.MustNewServer(c.RestConf)
+	server := rest.MustNewServer(
+		c.RestConf,
+		rest.WithCors("http://12.0.0.1:63343"),
+		rest.WithCorsHeaders("Authorization"),
+	)
+	// server := rest.MustNewServer(c.RestConf)
 	defer server.Stop()
 	c.Log.Level = "info"
 	logx.SetLevel(logx.InfoLevel)

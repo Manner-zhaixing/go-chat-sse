@@ -14,6 +14,7 @@ type (
 	MessageModel interface {
 		messageModel
 		FindOneBySessionId(ctx context.Context, sessionId int64) (*Message, error)
+		FindMoreByConversationId(ctx context.Context, id int64) (*[]Message, error)
 	}
 
 	customMessageModel struct {
@@ -33,6 +34,21 @@ func (c customMessageModel) FindOneBySessionId(ctx context.Context, sessionId in
 	var resp Message
 	query := fmt.Sprintf("select %s from %s where `session_id` = ? limit 1", messageRows, c.table)
 	err := c.conn.QueryRowCtx(ctx, &resp, query, sessionId)
+	switch err {
+	case nil:
+		return &resp, nil
+	case sqlx.ErrNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
+}
+
+// FindMoreByConversationId 通过conversationId获取message，读取历史消息
+func (c customMessageModel) FindMoreByConversationId(ctx context.Context, conversationid int64) (*[]Message, error) {
+	var resp []Message
+	query := fmt.Sprintf("select %s from %s where `conversation_id` = ?", messageRows, c.table)
+	err := c.conn.QueryRowsCtx(ctx, &resp, query, conversationid)
 	switch err {
 	case nil:
 		return &resp, nil
