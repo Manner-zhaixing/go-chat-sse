@@ -1,0 +1,26 @@
+Name: user-api
+Host: 0.0.0.0
+Port: 8887
+Timeout: 100000
+mysqlConfig:
+  datasource: "root:123456@tcp(127.0.0.1:3306)/go-chat-sse?charset=utf8mb4&parseTime=True&loc=Local"
+  connectTimeout: 10
+auth:
+  accessSecret: "secret123456"
+  expire: 3600
+
+RedisConfig:
+  Host: "127.0.0.1:6379"
+  Pass: ""
+  Type: "node"
+  Tls: false
+  NonBlock: false
+  PingTimeout: 1s
+Snowflake:
+  WorkerId: 1  # 工作节点ID (0-1023)
+  DataCenterId: 1  # 数据中心ID (0-31)
+DeepSeek:
+  apiURL: "https://api.deepseek.com/chat/completions"
+  apiKey: "sk-a2b35940a42e4e84a3896b2cfc5e74b5"
+  apiModel: "deepseek-chat"
+CommonUserIdStart: 100
