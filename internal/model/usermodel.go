@@ -17,6 +17,7 @@ type (
 		FindByUsername(ctx context.Context, username string) (*User, error)
 		FindByUsernameAndPassword(ctx context.Context, username string, password string) (*User, error)
 		UpdateConversationNumByConversationIdAndUserId(ctx context.Context, UserId int64) error
+		UpdateJianConversationNumByConversationIdAndUserId(ctx context.Context, userid int64) error
 	}
 
 	customUserModel struct {
@@ -63,6 +64,16 @@ func (m *customUserModel) FindByUsernameAndPassword(ctx context.Context, usernam
 
 func (m *customUserModel) UpdateConversationNumByConversationIdAndUserId(ctx context.Context, userID int64) error {
 	const updateQuery = "UPDATE %s SET conversation_nums = conversation_nums + 1 WHERE id = ?"
+	_, err := m.conn.ExecCtx(ctx, fmt.Sprintf(updateQuery, m.table), userID)
+	if err != nil {
+		return fmt.Errorf("failed to increment conversation_nums: %w", err)
+	}
+
+	return nil
+}
+
+func (m *customUserModel) UpdateJianConversationNumByConversationIdAndUserId(ctx context.Context, userID int64) error {
+	const updateQuery = "UPDATE %s SET conversation_nums = conversation_nums - 1 WHERE id = ?"
 	_, err := m.conn.ExecCtx(ctx, fmt.Sprintf(updateQuery, m.table), userID)
 	if err != nil {
 		return fmt.Errorf("failed to increment conversation_nums: %w", err)

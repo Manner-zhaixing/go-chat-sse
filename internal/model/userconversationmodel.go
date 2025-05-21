@@ -1,6 +1,10 @@
 package model
 
-import "github.com/zeromicro/go-zero/core/stores/sqlx"
+import (
+	"context"
+	"fmt"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
+)
 
 var _ UserConversationModel = (*customUserConversationModel)(nil)
 
@@ -9,7 +13,7 @@ type (
 	// and implement the added methods in customUserConversationModel.
 	UserConversationModel interface {
 		userConversationModel
-		withSession(session sqlx.Session) UserConversationModel
+		DeleteByConversationIdAndUserId(ctx context.Context, conversationId int64, userId int64) error
 	}
 
 	customUserConversationModel struct {
@@ -24,6 +28,8 @@ func NewUserConversationModel(conn sqlx.SqlConn) UserConversationModel {
 	}
 }
 
-func (m *customUserConversationModel) withSession(session sqlx.Session) UserConversationModel {
-	return NewUserConversationModel(sqlx.NewSqlConnFromSession(session))
+func (c *customUserConversationModel) DeleteByConversationIdAndUserId(ctx context.Context, conversationId int64, userId int64) error {
+	query := fmt.Sprintf("delete from %s where `user_id` = ? and `conversation_id` = ?", c.table)
+	_, err := c.conn.ExecCtx(ctx, query, userId, conversationId)
+	return err
 }

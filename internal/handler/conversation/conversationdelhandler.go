@@ -1,6 +1,7 @@
 package conversation
 
 import (
+	"go-chat-sse/internal/biz"
 	"net/http"
 
 	"github.com/zeromicro/go-zero/rest/httpx"
@@ -22,7 +23,7 @@ func ConversationdelHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		if err != nil {
 			httpx.ErrorCtx(r.Context(), w, err)
 		} else {
-			httpx.Ok(w)
+			httpx.OkJsonCtx(r.Context(), w, biz.Success(nil))
 		}
 	}
 }
