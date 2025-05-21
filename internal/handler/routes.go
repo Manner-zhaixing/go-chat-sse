@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	chat "go-chat-sse/internal/handler/chat"
+	conversation "go-chat-sse/internal/handler/conversation"
 	health "go-chat-sse/internal/handler/health"
 	user "go-chat-sse/internal/handler/user"
 	"go-chat-sse/internal/svc"
@@ -18,12 +19,29 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			{
 				Method:  http.MethodGet,
 				Path:    "/message/pull/:sessionid",
-				Handler: chat.MessagePullHandler(serverCtx),
+				Handler: chat.MessagepullHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodPost,
 				Path:    "/message/send",
 				Handler: chat.MessageHandler(serverCtx),
+			},
+		},
+		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
+		rest.WithPrefix("/v1"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/conversation/add",
+				Handler: conversation.ConversationaddHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/conversation/del/:conversation_id",
+				Handler: conversation.ConversationdelHandler(serverCtx),
 			},
 		},
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),

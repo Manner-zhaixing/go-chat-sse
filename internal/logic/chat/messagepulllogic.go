@@ -81,7 +81,7 @@ func (l *MessagePullLogic) MessagePullLogic(req *types.MessagePullReq, w http.Re
 	conversationOne, err := l.ConversationModel.FindOneBySessionId(l.ctx, sessionOne.MessageId)
 	if err != nil {
 		if errors.Is(err, sqlx.ErrNotFound) {
-			// 会话不存在，新建一个conversation
+			// todo 会话不存在，新建一个conversation
 		} else {
 			l.Logger.Errorf("%s db error,err:%s", MessagePull, err)
 			return biz.DBError

@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-func MessagePullHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+func MessagepullHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req types.MessagePullReq
 		if err := httpx.Parse(r, &req); err != nil {

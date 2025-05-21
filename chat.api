@@ -56,8 +56,13 @@ type MessagePullReq {
 	SessionId int64 `path:"sessionid"`
 }
 
-type NewConversationResp {
+// 新增大会话
+type ConversationAddResp {
 	ConversationId int64 `json:"conversation_id"`
+}
+
+type ConversationDelReq {
+	ConversationId int64 `path:"conversation_id"`
 }
 
 type HealthResp {
@@ -105,5 +110,18 @@ service user-api {
 
 	@handler messagepull
 	get /message/pull/:sessionid (MessagePullReq) returns (MessagePullResp)
+}
+
+@server (
+	prefix: v1
+	group:  conversation
+	jwt:    Auth
+)
+service user-api {
+	@handler conversationadd
+	get /conversation/add returns (ConversationAddResp)
+
+	@handler conversationdel
+	get /conversation/del/:conversation_id (ConversationDelReq)
 }
 
