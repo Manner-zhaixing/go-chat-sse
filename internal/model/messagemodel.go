@@ -15,6 +15,7 @@ type (
 		messageModel
 		FindOneBySessionId(ctx context.Context, sessionId int64) (*Message, error)
 		FindMoreByConversationId(ctx context.Context, id int64) (*[]Message, error)
+		DeleteByConversationId(ctx context.Context, id int64) error
 	}
 
 	customMessageModel struct {
@@ -57,4 +58,10 @@ func (c customMessageModel) FindMoreByConversationId(ctx context.Context, conver
 	default:
 		return nil, err
 	}
+}
+
+func (c customMessageModel) DeleteByConversationId(ctx context.Context, conversationId int64) error {
+	query := fmt.Sprintf("delete from %s where `conversation_id` = ?", c.table)
+	_, err := c.conn.ExecCtx(ctx, query, conversationId)
+	return err
 }

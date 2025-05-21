@@ -43,6 +43,16 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Path:    "/conversation/del/:conversation_id",
 				Handler: conversation.ConversationdelHandler(serverCtx),
 			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/conversation/infos",
+				Handler: conversation.ConversationinfosHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/conversation/message/:conversation_id",
+				Handler: conversation.ConversationmessagesHandler(serverCtx),
+			},
 		},
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
 		rest.WithPrefix("/v1"),

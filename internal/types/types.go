@@ -9,6 +9,37 @@ type ConversationDelReq struct {
 	ConversationId int64 `path:"conversation_id"`
 }
 
+type ConversationInfo struct {
+	UserId         int64  `json:"user_id"`
+	ConversationId int64  `json:"conversation_id"`
+	FirstTime      string `json:"first_time"`
+	LastTime       string `json:"last_time"`
+}
+
+type ConversationInfosResp struct {
+	ConversationInfos []ConversationInfo `json:"conversation_infos"`
+}
+
+type ConversationMessage struct {
+	MessageId      int64  `json:"message_id"`
+	UserId         int64  `json:"user_id"`
+	ConversationId int64  `json:"conversation_id"`
+	ModelId        int    `json:"model_id"`
+	FromId         int64  `json:"from_id"`
+	ToId           int64  `json:"to_id"`
+	Content        string `json:"content"`
+	Done           int    `json:"done"`
+	CurTime        string `json:"cur_time"`
+}
+
+type ConversationMessageReq struct {
+	ConversationId int64 `path:"conversation_id"`
+}
+
+type ConversationMessageResp struct {
+	ConversationMessages []ConversationMessage `json:"conversation_messages"`
+}
+
 type HealthResp struct {
 	Res string `json:"res"`
 }

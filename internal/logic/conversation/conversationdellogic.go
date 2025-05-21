@@ -21,6 +21,7 @@ type ConversationdelLogic struct {
 	ConversationModel     model.ConversationModel
 	UserConversationModel model.UserConversationModel
 	UserModel             model.UserModel
+	MessageModel          model.MessageModel
 }
 
 func NewConversationdelLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ConversationdelLogic {
@@ -31,6 +32,7 @@ func NewConversationdelLogic(ctx context.Context, svcCtx *svc.ServiceContext) *C
 		ConversationModel:     model.NewConversationModel(svcCtx.Mysql),
 		UserConversationModel: model.NewUserConversationModel(svcCtx.Mysql),
 		UserModel:             model.NewUserModel(svcCtx.Mysql),
+		MessageModel:          model.NewMessageModel(svcCtx.Mysql),
 	}
 }
 
@@ -53,10 +55,16 @@ func (l *ConversationdelLogic) Conversationdel(req *types.ConversationDelReq) er
 		l.Logger.Errorf("%s delete user_conversation error,DB error,info:%s", conversationDelModule, req)
 		return biz.DBError
 	}
-	// 更新user表的conversationnums
+	// 更新user表的conversationNums
 	err = l.UserModel.UpdateJianConversationNumByConversationIdAndUserId(l.ctx, userid)
 	if err != nil {
 		l.Logger.Errorf("%s database error.UpdateConversationNumByConversationIdAndUserId.info:%v", conversationModule, req)
+		return biz.DBError
+	}
+	// 删除conversation下的所有message
+	err = l.MessageModel.DeleteByConversationId(l.ctx, req.ConversationId)
+	if err != nil {
+		l.Logger.Errorf("%s database error.DeleteByConversationId.info:%v", conversationModule, req)
 		return biz.DBError
 	}
 	return nil
